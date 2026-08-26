@@ -3,7 +3,11 @@
 import numpy as np
 
 from .parameters import DT, SIMULATION_TIME
-from .physics import compute_acceleration, compute_angular_acceleration
+from .physics import (
+    compute_acceleration,
+    compute_angular_acceleration,
+    handle_table_bounce,
+)
 
 
 def simulate(
@@ -13,26 +17,8 @@ def simulate(
     dt=DT,
     simulation_time=SIMULATION_TIME,
 ):
-    """Simula el movimiento de la pelota durante un intervalo de tiempo.
+    """Simula el movimiento de la pelota."""
 
-    Parameters
-    ----------
-    position : np.ndarray
-        Posición inicial [mm].
-    velocity : np.ndarray
-        Velocidad lineal inicial [mm/s].
-    omega : np.ndarray
-        Velocidad angular inicial [rad/s].
-    dt : float
-        Paso de tiempo [s].
-    simulation_time : float
-        Duración total de la simulación [s].
-
-    Returns
-    -------
-    tuple
-        (t, positions, velocities, accelerations, omegas, alphas)
-    """
     t = np.arange(0.0, simulation_time + dt, dt)
     n = len(t)
 
@@ -57,15 +43,26 @@ def simulate(
         )
 
         velocities[:, k] = (
-            velocities[:, k - 1] + accelerations[:, k - 1] * dt
+            velocities[:, k - 1]
+            + accelerations[:, k - 1] * dt
         )
 
         positions[:, k] = (
-            positions[:, k - 1] + velocities[:, k] * dt
+            positions[:, k - 1]
+            + velocities[:, k] * dt
         )
 
         omegas[:, k] = (
-            omegas[:, k - 1] + alphas[:, k - 1] * dt
+            omegas[:, k - 1]
+            + alphas[:, k - 1] * dt
+        )
+
+        positions[:, k], velocities[:, k], omegas[:, k] = (
+            handle_table_bounce(
+                positions[:, k],
+                velocities[:, k],
+                omegas[:, k],
+            )
         )
 
     accelerations[:, -1] = compute_acceleration(
@@ -77,4 +74,11 @@ def simulate(
         omegas[:, -1]
     )
 
-    return t, positions, velocities, accelerations, omegas, alphas
+    return (
+        t,
+        positions,
+        velocities,
+        accelerations,
+        omegas,
+        alphas,
+    )
